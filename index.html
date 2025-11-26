@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoWealth - Monthly Expense Tracker</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jsPDF & AutoTable for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .input-group:focus-within label {
+            color: #059669;
+        }
+
+        .input-group:focus-within i {
+            color: #059669;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #10b981; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #059669; 
+        }
+        
+        /* Progress Bar Animation */
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 text-gray-800 pb-20">
+
+    <div class="max-w-[1800px] mx-auto flex flex-col gap-6">
+        
+        <!-- Header & Balance Section -->
+        <div class="glass-panel p-6">
+            <div class="flex flex-col xl:flex-row justify-between items-center gap-6">
+                
+                <!-- 1. Title Section (Left on Desktop, Center on Mobile) -->
+                <div class="w-full xl:w-auto text-center xl:text-left order-2 xl:order-1">
+                    <h1 class="text-2xl font-bold text-emerald-800 whitespace-nowrap"><i class="fas fa-leaf mr-2"></i>EcoWealth Tracker</h1>
+                    <p class="text-gray-500 text-sm mt-1">Manage Cash Flow, Debts & Liabilities</p>
+                </div>
+                
+                <!-- 2. Right Side: Stats & Buttons Wrapper -->
+                <div class="flex flex-col xl:flex-row items-center gap-6 w-full xl:w-auto order-1 xl:order-2">
+                    
+                    <!-- Stats Badges (Center on Mobile, Right on Desktop) -->
+                    <div class="flex flex-wrap justify-center xl:justify-end gap-4 order-2 xl:order-1">
+                        <!-- Liability -->
+                        <div class="bg-red-50 px-4 py-2 rounded-lg border border-red-200 text-center min-w-[120px]">
+                            <p class="text-xs text-red-500 uppercase tracking-wide font-bold">Total Liability</p>
+                            <p id="total-liability" class="text-lg font-bold text-red-600">₹0.00</p>
+                        </div>
+                        <!-- Debt -->
+                        <div class="bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 text-center min-w-[120px]">
+                            <p class="text-xs text-orange-500 uppercase tracking-wide font-bold">Pending Debt</p>
+                            <p id="total-debt" class="text-lg font-bold text-orange-600">₹0.00</p>
+                        </div>
+
+                        <!-- Divider (Desktop Only) -->
+                        <div class="border-l border-gray-300 h-10 hidden xl:block mx-2"></div>
+
+                        <!-- Cash Flow Stats -->
+                        <div class="text-center min-w-[80px]">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Income</p>
+                            <p id="total-income" class="text-xl font-bold text-green-600">+₹0.00</p>
+                        </div>
+                        <div class="text-center min-w-[80px]">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Expense</p>
+                            <p id="total-expense" class="text-xl font-bold text-red-600">-₹0.00</p>
+                        </div>
+                        <div class="bg-emerald-50 px-6 py-2 rounded-lg border border-emerald-200 text-center min-w-[140px]">
+                            <p class="text-xs text-emerald-600 uppercase tracking-wide font-bold">Net Balance</p>
+                            <p id="total-balance" class="text-2xl font-bold text-gray-800">₹0.00</p>
+                        </div>
+                    </div>
+
+                    <!-- Data Buttons (Top on Mobile, Far Right on Desktop) -->
+                    <div class="flex gap-2 justify-center xl:justify-end w-full xl:w-auto shrink-0 order-1 xl:order-2">
+                        <button onclick="exportPDF()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 transition-all hover:shadow-lg whitespace-nowrap font-medium">
+                            <i class="fas fa-file-pdf"></i> PDF Report
+                        </button>
+                        <button onclick="exportCSV()" class="bg-green-600 hover:bg-green-700 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 transition-all hover:shadow-lg whitespace-nowrap font-medium">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </button>
+                        <label class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 cursor-pointer transition-all hover:shadow-lg whitespace-nowrap font-medium">
+                            <i class="fas fa-file-import"></i> Import
+                            <input type="file" id="import-file" accept=".csv" class="hidden" onchange="importCSV(this)">
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+
+            <!-- Column 1: Input Form & AI -->
+            <div class="flex flex-col gap-6">
+                <div class="glass-panel p-6">
+                    <h2 class="text-lg font-semibold mb-4 text-emerald-800">Add Entry</h2>
+                    <form id="transaction-form" class="space-y-4">
+                        
+                        <!-- Toggle Type -->
+                        <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-lg">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="income" class="hidden peer" onchange="handleTypeChange()">
+                                <span class="block py-2 text-center rounded-md text-xs font-bold text-gray-500 peer-checked:bg-green-500 peer-checked:text-white transition-all">
+                                    INCOME
+                                </span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="expense" class="hidden peer" checked onchange="handleTypeChange()">
+                                <span class="block py-2 text-center rounded-md text-xs font-bold text-gray-500 peer-checked:bg-red-500 peer-checked:text-white transition-all">
+                                    EXPENSE
+                                </span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="debt" class="hidden peer" onchange="handleTypeChange()">
+                                <span class="block py-2 text-center rounded-md text-xs font-bold text-gray-500 peer-checked:bg-orange-500 peer-checked:text-white transition-all">
+                                    LENDING
+                                </span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="loan" class="hidden peer" onchange="handleTypeChange()">
+                                <span class="block py-2 text-center rounded-md text-xs font-bold text-gray-500 peer-checked:bg-blue-600 peer-checked:text-white transition-all">
+                                    LOAN / EMI
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Dynamic Sub-Options -->
+                        
+                        <!-- Debt Options -->
+                        <div id="debt-options" class="hidden bg-orange-50 p-2 rounded-lg border border-orange-100">
+                            <div class="flex gap-2">
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="debtType" value="lent" class="hidden peer" checked>
+                                    <div class="text-center py-1.5 border border-orange-200 rounded text-xs text-gray-600 peer-checked:bg-orange-500 peer-checked:text-white transition-all">
+                                        Given (Out)
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="debtType" value="collected" class="hidden peer">
+                                    <div class="text-center py-1.5 border border-orange-200 rounded text-xs text-gray-600 peer-checked:bg-green-600 peer-checked:text-white transition-all">
+                                        Collected (In)
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Common: Date -->
+                        <div class="input-group">
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Date / Start Date</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="date" id="date" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Common: Description / Name -->
+                        <div class="input-group">
+                            <label id="desc-label" class="block text-xs font-bold text-gray-500 mb-1 uppercase">Description</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-tag"></i></span>
+                                <input type="text" id="description" placeholder="e.g. Salary, Home Loan" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" required>
+                            </div>
+                        </div>
+
+                        <!-- Specific: Person Name (Lending) -->
+                        <div id="person-group" class="input-group hidden">
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Person Name</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-user"></i></span>
+                                <input type="text" id="person" placeholder="e.g. John Doe" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Common: Amount / Principal -->
+                        <div class="input-group">
+                            <label id="amount-label" class="block text-xs font-bold text-gray-500 mb-1 uppercase">Amount</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-rupee-sign"></i></span>
+                                <input type="number" id="amount" placeholder="0.00" min="0.01" step="0.01" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" required>
+                            </div>
+                        </div>
+
+                        <!-- Specific: Loan Fields -->
+                        <div id="loan-fields" class="hidden space-y-4">
+                            <div class="input-group">
+                                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Monthly EMI Amount</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-clock"></i></span>
+                                    <input type="number" id="emi-amount" placeholder="0.00" min="0" step="0.01" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Total Installments (Months)</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-hashtag"></i></span>
+                                    <input type="number" id="total-months" placeholder="e.g. 12, 24, 60" min="1" step="1" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Specific: Category (Income/Expense) -->
+                        <div id="category-group" class="input-group">
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Category</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-list"></i></span>
+                                <select id="category" class="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white transition-all">
+                                    <!-- Options populated by JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5">
+                            Save Entry
+                        </button>
+                    </form>
+                </div>
+
+                <!-- AI Advisor -->
+                <div class="glass-panel p-6 relative overflow-hidden flex-1">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i class="fas fa-robot text-6xl text-emerald-900"></i>
+                    </div>
+                    <h2 class="text-sm font-bold text-emerald-800 flex items-center mb-3">
+                        <i class="fas fa-brain mr-2"></i> AI Advisor
+                    </h2>
+                    <div id="ai-suggestion" class="text-xs text-gray-600 leading-relaxed">
+                        Analyzing...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Statistics -->
+            <div class="flex flex-col gap-6">
+                <div class="glass-panel p-6 h-64 flex flex-col">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase mb-2">Cash Flow</h2>
+                    <div class="flex-1 relative w-full h-full">
+                        <canvas id="cashFlowChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 h-80 flex flex-col">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase mb-2">Expense Breakdown</h2>
+                    <div class="flex-1 relative w-full h-full flex justify-center items-center">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 3: Lending List -->
+            <div class="glass-panel p-6 flex flex-col bg-orange-50/50">
+                <h2 class="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                    <i class="fas fa-hand-holding-usd mr-2"></i> Lending
+                </h2>
+                <div class="text-xs text-gray-500 mb-2 italic">People who owe you</div>
+                <div class="overflow-y-auto flex-1 pr-2 max-h-[500px]" id="debtors-list">
+                    <!-- Debtor cards -->
+                </div>
+            </div>
+
+            <!-- Column 4: Loans & EMIs -->
+            <div class="glass-panel p-6 flex flex-col bg-blue-50/50">
+                <h2 class="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+                    <i class="fas fa-file-invoice-dollar mr-2"></i> Loans & EMIs
+                </h2>
+                <div class="text-xs text-gray-500 mb-2 italic">Your liabilities</div>
+                <div class="overflow-y-auto flex-1 pr-2 max-h-[500px]" id="loans-list">
+                    <!-- Loan cards -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Row: History -->
+        <div class="glass-panel p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-emerald-800">Transaction History</h2>
+                <button onclick="clearAllData()" class="text-xs text-red-400 hover:text-red-600 underline">Reset All Data</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-100 text-xs uppercase text-gray-500 font-bold">
+                        <tr>
+                            <th class="px-4 py-3 rounded-l-lg">Date</th>
+                            <th class="px-4 py-3">Description</th>
+                            <th class="px-4 py-3">Category / Type</th>
+                            <th class="px-4 py-3 text-right rounded-r-lg">Amount</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-table-body">
+                        <!-- Rows -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="empty-history" class="text-center text-gray-400 mt-8 hidden">
+                <i class="fas fa-receipt text-4xl mb-2"></i>
+                <p>No transactions yet.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- State Management ---
+        const expenseCategories = ['Housing', 'Food', 'Transportation', 'Utilities', 'Entertainment', 'Healthcare', 'Shopping', 'EMI Payment', 'Other'];
+        const incomeCategories = ['Salary', 'Freelance', 'Investments', 'Gift', 'Other'];
+        
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let loans = JSON.parse(localStorage.getItem('loans')) || [];
+        
+        // --- Chart Instances ---
+        let cashFlowChartInstance = null;
+        let expenseChartInstance = null;
+
+        // --- DOM Elements ---
+        const form = document.getElementById('transaction-form');
+        const descriptionInput = document.getElementById('description');
+        const personInput = document.getElementById('person');
+        const amountInput = document.getElementById('amount');
+        const emiAmountInput = document.getElementById('emi-amount');
+        const totalMonthsInput = document.getElementById('total-months');
+        const dateInput = document.getElementById('date');
+        const categorySelect = document.getElementById('category');
+        
+        // UI Sections
+        const debtOptionsDiv = document.getElementById('debt-options');
+        const loanFieldsDiv = document.getElementById('loan-fields');
+        const categoryGroupDiv = document.getElementById('category-group');
+        const personGroupDiv = document.getElementById('person-group');
+        const descLabel = document.getElementById('desc-label');
+        const amountLabel = document.getElementById('amount-label');
+
+        // Lists
+        const debtorsListEl = document.getElementById('debtors-list');
+        const loansListEl = document.getElementById('loans-list');
+        const historyTableBody = document.getElementById('transaction-table-body');
+        const emptyHistoryEl = document.getElementById('empty-history');
+
+        // Stats
+        const balanceEl = document.getElementById('total-balance');
+        const incomeEl = document.getElementById('total-income');
+        const expenseEl = document.getElementById('total-expense');
+        const debtEl = document.getElementById('total-debt');
+        const liabilityEl = document.getElementById('total-liability');
+        const aiSuggestionEl = document.getElementById('ai-suggestion');
+
+        // --- Initialization ---
+        window.addEventListener('load', () => {
+            dateInput.valueAsDate = new Date();
+            handleTypeChange();
+            updateUI();
+        });
+
+        // --- Logic: Handle Type Change ---
+        function handleTypeChange() {
+            const type = document.querySelector('input[name="type"]:checked').value;
+            categorySelect.innerHTML = '';
+            
+            // Reset visibility
+            debtOptionsDiv.classList.add('hidden');
+            loanFieldsDiv.classList.add('hidden');
+            personGroupDiv.classList.add('hidden');
+            categoryGroupDiv.classList.add('hidden');
+            
+            descLabel.textContent = "Description";
+            amountLabel.textContent = "Amount";
+
+            if (type === 'debt') {
+                debtOptionsDiv.classList.remove('hidden');
+                personGroupDiv.classList.remove('hidden');
+                descLabel.textContent = "Note / Reason";
+            } 
+            else if (type === 'loan') {
+                loanFieldsDiv.classList.remove('hidden');
+                descLabel.textContent = "Product / Loan Name";
+                amountLabel.textContent = "Principal / Total Price";
+            } 
+            else {
+                // Income or Expense
+                categoryGroupDiv.classList.remove('hidden');
+                const categories = type === 'income' ? incomeCategories : expenseCategories;
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categorySelect.appendChild(option);
+                });
+            }
+        }
+
+        // --- Logic: Add Entry ---
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const description = descriptionInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const dateVal = dateInput.value;
+            const type = document.querySelector('input[name="type"]:checked').value;
+            
+            if (description === '' || isNaN(amount) || amount <= 0 || !dateVal) {
+                alert('Please enter valid details.');
+                return;
+            }
+
+            const formattedDate = new Date(dateVal).toLocaleDateString();
+
+            if (type === 'loan') {
+                // Handle Loan Creation
+                const emi = parseFloat(emiAmountInput.value) || 0;
+                const months = parseInt(totalMonthsInput.value) || 1;
+
+                const newLoan = {
+                    id: generateID(),
+                    name: description,
+                    principal: amount,
+                    emiAmount: emi,
+                    totalMonths: months,
+                    paidMonths: 0,
+                    startDate: formattedDate,
+                    status: 'active'
+                };
+                loans.push(newLoan);
+                updateLocalStorage();
+                updateUI();
+                
+                // Clear inputs
+                emiAmountInput.value = '';
+                totalMonthsInput.value = '';
+
+            } else {
+                // Handle Regular Transaction (Income, Expense, Debt)
+                let finalType = type;
+                let finalCategory = categorySelect.value;
+                let finalPerson = '';
+
+                if (type === 'debt') {
+                    const debtAction = document.querySelector('input[name="debtType"]:checked').value;
+                    finalPerson = personInput.value.trim();
+                    if (!finalPerson) { alert('Person name required'); return; }
+                    finalType = debtAction === 'lent' ? 'debt-given' : 'debt-collected';
+                    finalCategory = 'Debt';
+                }
+
+                const transaction = {
+                    id: generateID(),
+                    description,
+                    person: finalPerson,
+                    amount,
+                    type: finalType,
+                    category: finalCategory,
+                    date: formattedDate,
+                    rawDate: dateVal
+                };
+
+                transactions.push(transaction);
+                updateLocalStorage();
+                updateUI();
+                
+                personInput.value = '';
+            }
+
+            // Common clear
+            descriptionInput.value = '';
+            amountInput.value = '';
+            dateInput.valueAsDate = new Date();
+        });
+
+        // --- Logic: Pay EMI ---
+        function payEMI(loanId) {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan || loan.status === 'closed') return;
+
+            if (confirm(`Record EMI payment of ₹${loan.emiAmount} for ${loan.name}?`)) {
+                // 1. Create Expense Transaction
+                const transaction = {
+                    id: generateID(),
+                    description: `EMI: ${loan.name}`,
+                    person: 'Bank/Lender',
+                    amount: loan.emiAmount,
+                    type: 'expense',
+                    category: 'EMI Payment',
+                    date: new Date().toLocaleDateString(),
+                    rawDate: new Date().toISOString().split('T')[0]
+                };
+                transactions.push(transaction);
+
+                // 2. Update Loan Status
+                loan.paidMonths += 1;
+                if (loan.paidMonths >= loan.totalMonths) {
+                    loan.status = 'closed';
+                    alert(`Congratulations! Loan '${loan.name}' is fully paid off.`);
+                }
+
+                updateLocalStorage();
+                updateUI();
+            }
+        }
+
+        // --- Core Helpers ---
+        function generateID() { return Math.floor(Math.random() * 1000000); }
+        function deleteTransaction(id) {
+            if(confirm("Delete this transaction?")) {
+                transactions = transactions.filter(t => t.id !== id);
+                updateLocalStorage();
+                updateUI();
+            }
+        }
+        function deleteLoan(id) {
+            if(confirm("Delete this loan record? This won't delete past EMI transactions.")) {
+                loans = loans.filter(l => l.id !== id);
+                updateLocalStorage();
+                updateUI();
+            }
+        }
+        function clearAllData() {
+            if(confirm("Reset ALL data including loans and transactions?")) {
+                transactions = [];
+                loans = [];
+                updateLocalStorage();
+                updateUI();
+            }
+        }
+        function updateLocalStorage() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            localStorage.setItem('loans', JSON.stringify(loans));
+        }
+        function formatMoney(amount) {
+            return '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // --- Export & Import Functions ---
+
+        // 1. Export to PDF
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Title
+            doc.setFontSize(18);
+            doc.setTextColor(0, 128, 0);
+            doc.text("EcoWealth Tracker Report", 14, 22);
+
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+            // Summary Table
+            doc.autoTable({
+                startY: 35,
+                head: [['Total Income', 'Total Expense', 'Net Balance', 'Pending Debt', 'Total Liability']],
+                body: [[
+                    document.getElementById('total-income').innerText,
+                    document.getElementById('total-expense').innerText,
+                    document.getElementById('total-balance').innerText,
+                    document.getElementById('total-debt').innerText,
+                    document.getElementById('total-liability').innerText
+                ]],
+                theme: 'grid',
+                headStyles: { fillColor: [16, 185, 129] }
+            });
+
+            // Loan/Liability Table
+            if(loans.length > 0) {
+                doc.text("Active Loans & Liabilities", 14, doc.lastAutoTable.finalY + 10);
+                const loanRows = loans.map(l => [l.name, formatMoney(l.principal), formatMoney(l.emiAmount), `${l.paidMonths}/${l.totalMonths}`, l.status]);
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 15,
+                    head: [['Loan Name', 'Principal', 'EMI', 'Progress', 'Status']],
+                    body: loanRows,
+                    theme: 'striped'
+                });
+            }
+
+            // Transactions Table
+            doc.text("Transaction History", 14, doc.lastAutoTable.finalY + 10);
+            const transactionRows = transactions.slice().reverse().map(t => [t.date, t.description, t.category, t.type, formatMoney(t.amount)]);
+            
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 15,
+                head: [['Date', 'Description', 'Category', 'Type', 'Amount']],
+                body: transactionRows,
+                theme: 'striped',
+                headStyles: { fillColor: [55, 65, 81] }
+            });
+
+            doc.save("EcoWealth_Report.pdf");
+        }
+
+        // 2. Export to CSV (Combines Transactions and Loans)
+        function exportCSV() {
+            // Define Header
+            // We create a union of columns for both regular transactions and loans
+            const header = ["ID", "Date", "Description", "Type", "Category", "Amount", "Person", "Loan_Principal", "Loan_EMI", "Loan_TotalMonths", "Loan_PaidMonths", "Loan_Status", "RawDate"];
+            
+            const rows = [];
+
+            // Add Transactions
+            transactions.forEach(t => {
+                rows.push([
+                    t.id, 
+                    t.date, 
+                    `"${t.description}"`, // Quote strings with commas
+                    t.type, 
+                    t.category || "", 
+                    t.amount, 
+                    t.person || "",
+                    "", "", "", "", "", // Empty loan fields
+                    t.rawDate
+                ]);
+            });
+
+            // Add Loans (marked with type 'loan_record' to distinguish on import)
+            loans.forEach(l => {
+                rows.push([
+                    l.id,
+                    l.startDate,
+                    `"${l.name}"`,
+                    "loan_record",
+                    "", // Category
+                    l.principal, // Amount column used for principal
+                    "", // Person
+                    l.principal,
+                    l.emiAmount,
+                    l.totalMonths,
+                    l.paidMonths,
+                    l.status,
+                    "" // RawDate (can use start date)
+                ]);
+            });
+
+            const csvContent = [header.join(",")].concat(rows.map(e => e.join(","))).join("\n");
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "ecowealth_data.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 3. Import CSV
+        function importCSV(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if(!confirm("Importing will ADD the records from this CSV to your current data. Continue?")) {
+                input.value = ''; // Reset
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                
+                // Skip header row
+                let importedCount = 0;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    // Basic CSV parsing (handling quotes simplistically)
+                    // Note: Robust CSV parsing usually needs regex or library, but this works for our format
+                    const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    
+                    if (cols.length < 5) continue; // Invalid row
+
+                    // Clean quotes from description
+                    const description = cols[2].replace(/^"|"$/g, '');
+                    const type = cols[3];
+                    const amount = parseFloat(cols[5]);
+
+                    if (type === 'loan_record') {
+                        // Restore Loan
+                        const newLoan = {
+                            id: generateID(), // Generate new ID to avoid conflict
+                            name: description,
+                            principal: parseFloat(cols[7]),
+                            emiAmount: parseFloat(cols[8]),
+                            totalMonths: parseInt(cols[9]),
+                            paidMonths: parseInt(cols[10]),
+                            startDate: cols[1],
+                            status: cols[11]
+                        };
+                        loans.push(newLoan);
+                    } else {
+                        // Restore Transaction
+                        const newTrans = {
+                            id: generateID(),
+                            date: cols[1],
+                            description: description,
+                            type: type,
+                            category: cols[4],
+                            amount: amount,
+                            person: cols[6],
+                            rawDate: cols[12] || new Date(cols[1]).toISOString().split('T')[0]
+                        };
+                        transactions.push(newTrans);
+                    }
+                    importedCount++;
+                }
+
+                updateLocalStorage();
+                updateUI();
+                alert(`Successfully imported ${importedCount} records.`);
+                input.value = ''; // Reset input
+            };
+            
+            reader.readAsText(file);
+        }
+
+
+        // --- UI Rendering ---
+        function updateUI() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalLent = 0;
+            let totalCollected = 0;
+
+            // Calculate Transaction Totals
+            transactions.forEach(t => {
+                if (t.type === 'income' || t.type === 'debt-collected') {
+                    totalIncome += t.amount;
+                    if(t.type === 'debt-collected') totalCollected += t.amount;
+                } else {
+                    totalExpense += t.amount;
+                    if(t.type === 'debt-given') totalLent += t.amount;
+                }
+            });
+
+            // Calculate Loan Liability
+            let totalLiability = 0;
+            loans.forEach(l => {
+                if (l.status === 'active') {
+                    const paidAmount = l.emiAmount * l.paidMonths;
+                    const totalPayable = l.emiAmount * l.totalMonths;
+                    // Liability is roughly the remaining total payable
+                    // If EMI * Months differs from Principal, we trust the EMI calc for liability
+                    totalLiability += (totalPayable - paidAmount);
+                }
+            });
+
+            const pendingDebt = totalLent - totalCollected;
+            const balance = totalIncome - totalExpense;
+
+            // Update Header Stats
+            incomeEl.innerText = `+${formatMoney(totalIncome)}`;
+            expenseEl.innerText = `-${formatMoney(totalExpense)}`;
+            balanceEl.innerText = formatMoney(balance);
+            debtEl.innerText = formatMoney(pendingDebt);
+            liabilityEl.innerText = formatMoney(totalLiability);
+
+            renderHistory();
+            renderDebtors();
+            renderLoans();
+            updateCharts(totalIncome, totalExpense);
+            runAIAdvisor(totalIncome, totalExpense, pendingDebt, totalLiability);
+        }
+
+        // --- Render Functions ---
+
+        function renderHistory() {
+            historyTableBody.innerHTML = '';
+            if (transactions.length === 0) {
+                emptyHistoryEl.classList.remove('hidden');
+                return;
+            }
+            emptyHistoryEl.classList.add('hidden');
+
+            transactions.slice().reverse().forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-50 hover:bg-gray-50 transition-colors";
+                
+                let typeColor = 'text-gray-600';
+                let sign = '';
+                
+                if (t.type === 'income' || t.type === 'debt-collected') {
+                    typeColor = 'text-green-600 font-bold';
+                    sign = '+';
+                } else {
+                    typeColor = 'text-red-500 font-bold';
+                    sign = '-';
+                }
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3">${t.date}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800">${t.description} ${t.person ? `(${t.person})` : ''}</td>
+                    <td class="px-4 py-3 text-xs uppercase"><span class="bg-gray-100 px-2 py-1 rounded text-gray-500">${t.category}</span></td>
+                    <td class="px-4 py-3 text-right ${typeColor}">${sign}${formatMoney(t.amount)}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="deleteTransaction(${t.id})" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                historyTableBody.appendChild(tr);
+            });
+        }
+
+        function renderDebtors() {
+            debtorsListEl.innerHTML = '';
+            const debtMap = {};
+
+            transactions.forEach(t => {
+                if (t.type === 'debt-given') debtMap[t.person] = (debtMap[t.person] || 0) + t.amount;
+                if (t.type === 'debt-collected') debtMap[t.person] = (debtMap[t.person] || 0) - t.amount;
+            });
+
+            const active = Object.entries(debtMap).filter(([_, amt]) => amt > 0);
+            
+            if (active.length === 0) {
+                debtorsListEl.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">No active debtors</div>`;
+                return;
+            }
+
+            active.forEach(([name, amt]) => {
+                const el = document.createElement('div');
+                el.className = "flex justify-between items-center bg-white p-3 mb-2 rounded border-l-4 border-orange-400 shadow-sm";
+                el.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs"><i class="fas fa-user"></i></div>
+                        <div><p class="font-bold text-sm text-gray-700">${name}</p></div>
+                    </div>
+                    <span class="font-bold text-orange-600 text-sm">${formatMoney(amt)}</span>
+                `;
+                debtorsListEl.appendChild(el);
+            });
+        }
+
+        function renderLoans() {
+            loansListEl.innerHTML = '';
+            if (loans.length === 0) {
+                loansListEl.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">No active loans</div>`;
+                return;
+            }
+
+            loans.forEach(loan => {
+                if (loan.status === 'closed') return; // Don't show closed loans
+
+                const paidAmount = loan.emiAmount * loan.paidMonths;
+                const totalAmount = loan.emiAmount * loan.totalMonths;
+                const progress = (loan.paidMonths / loan.totalMonths) * 100;
+                const pending = totalAmount - paidAmount;
+
+                const el = document.createElement('div');
+                el.className = "bg-white p-4 mb-3 rounded-lg border border-blue-100 shadow-sm relative";
+                
+                el.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-blue-900">${loan.name}</p>
+                            <p class="text-xs text-gray-500">Principal: ${formatMoney(loan.principal)}</p>
+                        </div>
+                        <button onclick="deleteLoan(${loan.id})" class="text-gray-300 hover:text-red-500 text-xs"><i class="fas fa-trash"></i></button>
+                    </div>
+                    
+                    <div class="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>EMI: <strong>${formatMoney(loan.emiAmount)}</strong></span>
+                        <span>Due: <strong>${formatMoney(pending)}</strong></span>
+                    </div>
+
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
+                        <div class="bg-blue-500 h-2 rounded-full progress-bar" style="width: ${progress}%"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-blue-500">${loan.paidMonths} / ${loan.totalMonths} Paid</span>
+                        <button onclick="payEMI(${loan.id})" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded transition-colors">
+                            Pay EMI
+                        </button>
+                    </div>
+                `;
+                loansListEl.appendChild(el);
+            });
+        }
+
+        // --- Charts & AI ---
+        function updateCharts(income, expense) {
+            const ctxFlow = document.getElementById('cashFlowChart').getContext('2d');
+            if (cashFlowChartInstance) cashFlowChartInstance.destroy();
+
+            cashFlowChartInstance = new Chart(ctxFlow, {
+                type: 'bar',
+                data: {
+                    labels: ['In', 'Out'],
+                    datasets: [{
+                        data: [income, expense],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } }
+                }
+            });
+
+            const ctxExp = document.getElementById('expenseChart').getContext('2d');
+            const dataMap = {};
+            transactions.forEach(t => {
+                if (t.type === 'expense' || t.type === 'debt-given') {
+                    const cat = t.type === 'debt-given' ? 'Lending' : t.category;
+                    dataMap[cat] = (dataMap[cat] || 0) + t.amount;
+                }
+            });
+
+            if (expenseChartInstance) expenseChartInstance.destroy();
+            
+            if (Object.keys(dataMap).length > 0) {
+                expenseChartInstance = new Chart(ctxExp, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(dataMap),
+                        datasets: [{
+                            data: Object.values(dataMap),
+                            backgroundColor: ['#f87171', '#fb923c', '#facc15', '#a3e635', '#34d399', '#22d3ee', '#818cf8'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } },
+                        cutout: '65%'
+                    }
+                });
+            } else {
+                ctxExp.clearRect(0,0, ctxExp.canvas.width, ctxExp.canvas.height);
+            }
+        }
+
+        function runAIAdvisor(income, expense, debt, liability) {
+            let msg = "";
+            let color = "text-gray-600";
+            
+            if (income === 0 && expense === 0) {
+                msg = "Start tracking to see insights.";
+            } else {
+                const ratio = income > 0 ? (expense / income) * 100 : 100;
+                
+                if (liability > 0 && liability > (income * 12)) {
+                    msg = `High Liability Alert! Your total loan debt is ${formatMoney(liability)}. Prioritize paying off high-interest loans.`;
+                    color = "text-red-600";
+                } else if (ratio > 100) {
+                    msg = "Critical: You are spending more than you earn. Cut down on lending and non-essential expenses.";
+                    color = "text-red-600";
+                } else if (ratio < 50) {
+                    msg = "Healthy Financials! You are saving >50% of income. Consider investing.";
+                    color = "text-emerald-600";
+                } else {
+                    msg = "Stable. Keep monitoring your EMIs and occasional expenses.";
+                }
+            }
+            aiSuggestionEl.innerHTML = `<span class="${color} font-medium">${msg}</span>`;
+        }
+    </script>
+</body>
+</html>
